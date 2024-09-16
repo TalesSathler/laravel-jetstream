@@ -1,0 +1,58 @@
+networks:
+  laravel-jetstream-network:
+      driver: bridge
+
+services:
+    db:
+        image: postgres
+        container_name: laravel-jetstream-postgres
+        deploy:
+            restart_policy:
+                condition: on-failure
+        environment:
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRESQL_USERNAME: postgres
+            POSTGRESQL_PASSWORD: postgres
+            PGDATA: /var/lib/postgresql/data/pgdata-base
+        ports:
+            - "5432:5432"
+        networks:
+            - laravel-jetstream-network
+
+    redis:
+        image: redis
+        container_name: laravel-jetstream-redis
+        networks:
+            - laravel-jetstream-network
+        restart: always
+
+    app:
+        container_name: laravel-jetstream-app
+        build: app
+        volumes:
+            - '../:/var/www'
+            - ./app/www.conf:/etc/php/8.3/fpm/pool.d/www.conf
+        ports:
+            - "9000:9000"
+        networks:
+            - laravel-jetstream-network
+        depends_on:
+            - db
+            - redis
+
+    web:
+        container_name: laravel-jetstream-nginx
+        build: nginx
+        volumes:
+            - '../:/var/www'
+            - ./nginx/conf.d/default.conf:/etc/nginx/conf.d/default.conf
+        ports:
+            - '80:80'
+            - '443:443'
+        networks:
+            - laravel-jetstream-network
+        depends_on:
+            - app
+        links:
+           - app
